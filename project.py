@@ -1,5 +1,6 @@
 from prettytable import PrettyTable
 from collections import defaultdict
+import unittest
 
 
 class Student:
@@ -13,8 +14,11 @@ class Student:
         self.course_map[course_name] = grade
 
     def generate_student_summary(self):
-        sorted_list = sorted(list(self.course_map.keys()))
-        return_list = [self.cwid, self.name, sorted_list]
+        passed = list()
+        for course, grade in self.course_map.items():
+            if grade != 'F':
+                passed.append(course)
+        return_list = [self.cwid, self.name, self.major, sorted(passed)]
         return return_list
 
 
@@ -39,6 +43,7 @@ class University:
     def __init__(self):
         self.student_list = dict()
         self.instructor_list = dict()
+        self.major_list = defaultdict(lambda: defaultdict(set))
 
     def get_student_info(self, file_path):
         file = self.file_reader(file_path)
@@ -58,6 +63,11 @@ class University:
             self.student_list[line[0]].add_grade(line[1], line[2])
             self.instructor_list[line[3]].add_student(line[1])
 
+    def get_major_info(self,file_path):
+        file = self.file_reader(file_path)
+        for line in file:
+            self.major_list[line[0]][line[1]].add(line[2])
+
     def file_reader(self, file_path):
         try:
             file = open(file_path)
@@ -73,9 +83,15 @@ class University:
 
     def print_student_summary(self):
         summary_table = PrettyTable()
-        summary_table.field_names = ['cwid', 'name', 'course']
+        summary_table.field_names = ['cwid', 'name', 'major', 'completed courses', 'remaining required', 'remaining electives']
         for student in self.student_list.values():
-            summary_table.add_row(student.generate_student_summary())
+            line = student.generate_student_summary()
+            line.append(sorted(self.major_list[line[2]]['R'].difference(line[3])))
+            if len(self.major_list[line[2]]['E'].difference(line[3])) == len(self.major_list[line[2]]['E']):
+                line.append(sorted(self.major_list[line[2]]['E']))
+            else:
+                line.append('None')
+            summary_table.add_row(line)
         print(summary_table)
 
     def print_instructor_summary(self):
@@ -86,15 +102,37 @@ class University:
                 summary_table.add_row(item)
         print(summary_table)
 
+    def print_major_summary(self):
+        summary_table = PrettyTable()
+        summary_table.field_names = ['dept', 'required', 'electives']
+        for dept,flag in self.major_list.items():
+            summary_table.add_row([dept, sorted(flag['R']), sorted(flag['E'])])
+        print(summary_table)
 
-def main():
+
+
+class ProjectTest(unittest.TestCase):
     sit = University()
     sit.get_student_info('/Users/wangshuai/Downloads/students.txt')
     sit.get_instructor_info('/Users/wangshuai/Downloads/instructors.txt')
     sit.get_grade_info('/Users/wangshuai/Downloads/grades.txt')
+    sit.get_major_info('/Users/wangshuai/Downloads/majors.txt')
     sit.print_student_summary()
     sit.print_instructor_summary()
+    sit.print_major_summary()
+
+    def test_student(self):
+        def test_major(self):
+            correct_result = {'SFEN': {'R': {'SSW 540', 'SSW 555', 'SSW 564', 'SSW 567'},
+                                 'E': {'CS 501', 'CS 513', 'CS 545'}},
+                        'SYEN': {'R': {'SYS 612', 'SYS 671', 'SYS 800'},
+                                 'E': {'SSW 540', 'SSW 565', 'SSW 810'}}}
+            test_result = dict()
+            for major, infomation in self.sit.major_list.items():
+                test_result[major] = {flag: courses for flag, courses in infomation.items()}
+            self.assertEqual(correct_result, test_result)
 
 
 if __name__ == '__main__':
-    main()
+    unittest.main(exit=False, verbosity=2)
+
