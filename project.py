@@ -1,6 +1,7 @@
 from prettytable import PrettyTable
 from collections import defaultdict
 import unittest
+import sqlite3
 
 
 class Student:
@@ -109,6 +110,19 @@ class University:
             summary_table.add_row([dept, sorted(flag['R']), sorted(flag['E'])])
         print(summary_table)
 
+    @staticmethod
+    def sql_test():
+        db = sqlite3.connect('/Users/wangshuai/810_startup.db')
+        sql = """ select i.CWID, i.Name, i.Dept, g.Course, count(g.Student_CWID)
+                  from HW11_instructors as i, HW11_grades as g
+                  where i.CWID = g.Instructor_CWID
+                  group by i.CWID, g.Course """
+        table = PrettyTable()
+        table.field_names = ['cwid', 'name', 'department', 'course', 'student_amount']
+        for row in db.execute(sql):
+            table.add_row(row)
+        print(table)
+
 
 
 class ProjectTest(unittest.TestCase):
@@ -120,6 +134,7 @@ class ProjectTest(unittest.TestCase):
     sit.print_student_summary()
     sit.print_instructor_summary()
     sit.print_major_summary()
+    sit.sql_test()
 
     def test_student(self):
         def test_major(self):
@@ -135,4 +150,3 @@ class ProjectTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(exit=False, verbosity=2)
-
